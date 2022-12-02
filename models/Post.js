@@ -10,4 +10,4 @@ const postSchema = new Schema({
   timestamp: { type: Date, required: true },
 });
 
-module.exports = mongoose.model('User', postSchema);
+module.exports = mongoose.model('Post', postSchema);
