@@ -6,7 +6,7 @@ const user_controller = require('../controllers/userController');
 const post_controller = require('../controllers/postController');
 const comment_controller = require('../controllers/commentController');
 
-// Verify Token Middleware
+// TODO: Verify Token Middleware
 
 // Routes
 /* GET home page. */
@@ -23,5 +23,24 @@ router.post('/posts', post_controller.post_create);
 router.put('/posts/:postid', post_controller.post_update);
 
 router.delete('/posts/:postid', post_controller.post_delete);
+
+/* comment controller routes */
+router.get('/posts/:postid/comments', comment_controller.comment_list);
+router.get(
+  '/posts/:postid/comments/:commentid',
+  comment_controller.comment_detail
+);
+
+router.post('/posts/:postid/comments', comment_controller.comment_create);
+
+router.put(
+  '/posts/:postid/comments/:commentid',
+  comment_controller.comment_update
+);
+
+router.delete(
+  '/posts/:postid/comments/:commentid',
+  comment_controller.comment_delete
+);
 
 module.exports = router;
