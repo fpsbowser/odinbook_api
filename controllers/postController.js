@@ -19,10 +19,17 @@ exports.post_detail = function (req, res, next) {
   // find specific post
   Post.findById(req.params.postid, function (err, post) {
     if (err) {
-      return next(err);
+      res
+        .json({
+          message: `Can't find post with id: ${req.params.postid}`,
+          error: err,
+        })
+        .status(400);
+      // next(err);
+    } else {
+      console.log(`POST ID: ${req.params.postid}`);
+      res.json(post);
     }
-    console.log(`POST ID: ${req.params.postid}`);
-    res.json(post);
   });
 };
 
@@ -48,8 +55,8 @@ exports.post_create = [
         if (err) {
           next(err);
         } else {
-          res.json({ message: 'Success', post });
           // TODO: push post to owners posts array
+          res.json({ message: 'Success', post });
         }
       });
     }
@@ -66,7 +73,7 @@ exports.post_update = [
     } else {
       // create updated post document
       const post = new Post({
-        _id: req.params.postid,
+        _id: originalPost._id,
         post: req.body.post,
         owner: originalPost.owner,
         comments: originalPost.comments,
@@ -92,8 +99,16 @@ exports.post_update = [
 ];
 
 exports.post_delete = async (req, res, next) => {
+  // TODO: GRACEFULLY HANDLE ERRORS
   // check to see if post has comments
-  const post = await Post.findById(req.params.postid);
+  const post = await Post.findById(req.params.postid, (err) => {
+    if (err) {
+      res
+        .json({ message: `Can't find post with id: ${req.params.postid}` })
+        .status(400);
+      return next(err);
+    }
+  });
   if (post.comments.length > 0) {
     // post has comments
     const totalComments = post.comments.length;
