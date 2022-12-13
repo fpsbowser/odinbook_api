@@ -5,6 +5,7 @@ const Post = require('./models/post');
 const Comment = require('./models/comment');
 const { faker } = require('@faker-js/faker');
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 mongoose.connect(process.env.MONGO_URL, {
   useUnifiedTopology: true,
@@ -35,12 +36,13 @@ function userCreate(
   posts,
   cb
 ) {
+  let hashedPassword = bcrypt.hashSync(password, 8);
   userDetail = {
     _id,
     name,
     dob,
     email,
-    password,
+    password: hashedPassword,
     friends,
     friend_requests,
     posts,
