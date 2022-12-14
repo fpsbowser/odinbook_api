@@ -3,6 +3,7 @@ var router = express.Router();
 
 // Controllers
 const user_controller = require('../controllers/userController');
+const auth_controller = require('../controllers/authController');
 const post_controller = require('../controllers/postController');
 const comment_controller = require('../controllers/commentController');
 
@@ -42,5 +43,12 @@ router.delete(
   '/posts/:postid/comments/:commentid',
   comment_controller.comment_delete
 );
+
+/* auth controller routes */
+router.post('/login', auth_controller.post_login);
+
+router.post('/signup', auth_controller.post_signup);
+
+/* user controller routes */
 
 module.exports = router;
