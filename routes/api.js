@@ -44,11 +44,17 @@ router.delete(
   comment_controller.comment_delete
 );
 
+/* user controller routes */
+router.get('/users', user_controller.user_list);
+router.get('/users/:userid', user_controller.user_detail);
+router.get('/users/:userid/posts', user_controller.user_posts);
+router.get('/users/:userid/comments', user_controller.user_comments);
+router.get('/users/:userid/friends', user_controller.user_friends);
+router.get('/users/:userid/requests', user_controller.user_requests);
+
 /* auth controller routes */
 router.post('/login', auth_controller.post_login);
 
 router.post('/signup', auth_controller.post_signup);
-
-/* user controller routes */
 
 module.exports = router;
