@@ -1,7 +1,6 @@
 const User = require('../models/user');
 const Post = require('../models/post');
 const Comment = require('../models/comment');
-const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 
 exports.posts_list = function (req, res, next) {

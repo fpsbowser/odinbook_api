@@ -2,7 +2,6 @@ const User = require('../models/user');
 const Post = require('../models/post');
 const Comment = require('../models/comment');
 const async = require('async');
-const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 
 exports.user_list = (req, res, next) => {
