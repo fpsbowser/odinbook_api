@@ -4,6 +4,9 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const mongoose = require('mongoose');
+const cors = require('cors');
+const passport = require('passport');
+require('./passport');
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URL, {
@@ -21,6 +24,8 @@ const apiRouter = require('./routes/api');
 
 var app = express();
 
+app.use(cors());
+app.use(passport.initialize());
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
