@@ -1,5 +1,7 @@
 # OdinBook API
 
+Check out the client repo [here](https://github.com/fpsbowser/OdinBook_client)!
+
 ### Summary
 
 OdinBook API was created following the final NodeJS project in [theodinproject](https://www.theodinproject.com/lessons/nodejs-odin-book) curriculum.
