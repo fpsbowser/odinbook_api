@@ -15,7 +15,7 @@ mongoose.connect(process.env.MONGO_URL, {
 });
 const db = mongoose.connection;
 db.on('error', console.error.bind(console, 'mongo connection error'));
-db.on('open', (err) => {
+db.once('open', (err) => {
   err ? console.log(err) : console.log('connected');
 });
 
@@ -30,9 +30,12 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/api', apiRouter);
+
+app.listen(4000, () => {
+  console.log('listening on PORT 4000');
+});
 
 module.exports = app;
