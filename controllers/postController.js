@@ -5,35 +5,44 @@ const { body, validationResult } = require('express-validator');
 
 exports.posts_list = function (req, res, next) {
   // fetch all posts
-  Post.find({}).exec((err, list_posts) => {
-    if (err) {
-      return next(err);
-    }
-    console.log(`Amount of posts: ${list_posts.length}`);
-    res.json(list_posts);
-  });
+  Post.find({})
+    .populate('owner')
+    .exec((err, list_posts) => {
+      if (err) {
+        return next(err);
+      }
+      console.log(`Amount of posts: ${list_posts.length}`);
+      res.json(list_posts);
+    });
 };
 
-exports.post_detail = function (req, res, next) {
-  // find specific post
-  Post.findById(req.params.postid, function (err, post) {
-    if (err) {
-      res
-        .json({
-          message: `Can't find post with id: ${req.params.postid}`,
-          error: err,
-        })
-        .status(400);
-      // next(err);
-    } else {
-      console.log(`POST ID: ${req.params.postid}`);
-      res.json(post);
+exports.post_detail = async (req, res, next) => {
+  try {
+    const post = await Post.findById(req.params.postid)
+      .populate({
+        path: 'owner',
+        select: 'name',
+      })
+      .populate({
+        path: 'likes',
+        select: 'name',
+      })
+      .exec();
+
+    if (!post) {
+      return res
+        .status(404)
+        .json({ message: `Cannot find post with id: ${req.params.postid}` });
     }
-  });
+    res.json(post);
+  } catch (error) {
+    next(error);
+  }
 };
 
 exports.post_create = [
   body('post', 'Your post can not be empty!').trim().isLength({ min: 1 }),
+  body('owner', 'Your post must provide an owner!').trim().isLength({ min: 1 }),
   (req, res, next) => {
     const errors = validationResult(req);
 
@@ -42,8 +51,7 @@ exports.post_create = [
     } else {
       const post = new Post({
         post: req.body.post,
-        // TODO:  CHANGE FOR AUTHENTICATION
-        owner: '009f37bb36efc8d1aea0b5db',
+        owner: req.body.owner,
         comments: [],
         likes: [],
         timestamp: new Date(),
@@ -54,8 +62,21 @@ exports.post_create = [
         if (err) {
           next(err);
         } else {
-          // TODO: push post to owners posts array
-          res.json({ message: 'Success', post });
+          User.findByIdAndUpdate(
+            req.body.owner,
+            { $push: { posts: post } },
+            { upsert: true, new: true },
+            function (err) {
+              if (err) {
+                console.log(
+                  `Error pushing post to user's post array. Error: ${err}`
+                );
+                next(err);
+              } else {
+                return res.json({ message: 'Success', post });
+              }
+            }
+          );
         }
       });
     }
@@ -70,10 +91,19 @@ exports.post_update = [
     if (!errors.isEmpty()) {
       res.json(errors).status(400);
     } else {
+      if (req.body.like !== null) {
+        originalPost.likes.includes(req.body.like)
+          ? originalPost.likes.splice(
+              originalPost.likes.indexOf(req.body.like),
+              1
+            )
+          : (originalPost.likes = [...originalPost.likes, req.body.like]);
+        console.log(originalPost.likes);
+      }
       // create updated post document
       const post = new Post({
         _id: originalPost._id,
-        post: req.body.post,
+        post: req.body.post ? req.body.post : originalPost.post,
         owner: originalPost.owner,
         comments: originalPost.comments,
         likes: originalPost.likes,
@@ -98,51 +128,27 @@ exports.post_update = [
 ];
 
 exports.post_delete = async (req, res, next) => {
-  // TODO: GRACEFULLY HANDLE ERRORS
-  // check to see if post has comments
-  const post = await Post.findById(req.params.postid, (err) => {
-    if (err) {
-      res
-        .json({ message: `Can't find post with id: ${req.params.postid}` })
-        .status(400);
-      return next(err);
+  try {
+    // check to see if post has comments
+    const post = await Post.findById(req.params.postid);
+    if (!post) throw new Error(`Can't find post with id: ${req.params.postid}`);
+
+    if (post.comments.length > 0) {
+      // post has comments
+      const commentIds = post.comments.map((comment) => comment._id);
+      await Comment.deleteMany({ _id: { $in: commentIds } });
     }
-  });
-  if (post.comments.length > 0) {
-    // post has comments
-    const totalComments = post.comments.length;
-    console.log('Post has comments!');
-    post.comments.forEach((comment) => {
-      Comment.findByIdAndRemove(comment._id, (err, removedComment) => {
-        if (err) {
-          return next(err);
-        } else {
-          console.log(`REMOVED: ${removedComment}`);
-          console.log(`removed ${totalComments} comments`);
-        }
-      });
+
+    // find post owner and remove post from owners post array
+    const user = await User.findByIdAndUpdate(post.owner._id, {
+      $pull: { posts: post._id },
     });
+
+    // delete post after comments are deleted
+    await Post.findByIdAndRemove(req.params.postid);
+
+    res.json({ message: 'Successfully removed post' });
+  } catch (error) {
+    next(error);
   }
-  // find post owner and remove post from owners post array
-  User.findByIdAndUpdate(
-    post.owner._id,
-    {
-      $pull: { posts: { $in: [post._id] } },
-    },
-    (err, removedPost) => {
-      if (err) {
-        console.log(`ERROR UPDATING USER POST ARRAY`);
-        return next(err);
-      } else {
-        console.log(`Updated user: ${post.owner._id} - Pulled: ${removedPost}`);
-      }
-    }
-  );
-  // delete post after comments are deleted
-  Post.findByIdAndRemove(req.params.postid, (err, removedPost) => {
-    if (err) {
-      return next(err);
-    }
-    res.json({ message: 'Successfully removed post', removedPost }).status(200);
-  });
 };
