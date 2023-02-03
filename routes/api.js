@@ -79,23 +79,34 @@ router.get(
   isAuthenticated,
   user_controller.user_requests
 );
+router.put(
+  '/users/:userid/requests',
+  isAuthenticated,
+  user_controller.user_requests_update
+);
 
 /* auth controller routes */
 // router.post('/login', auth_controller.post_login);
-router.post('/login', function (req, res, next) {
+router.post('/auth/login', function (req, res, next) {
   passport.authenticate(
     'local',
     { session: false, failureRedirect: '/login' },
     (err, user) => {
       if (err || !user) {
         return res
-          .json({ message: 'Something is not right', user })
+          .json({
+            message: 'Something is not right',
+            user,
+            success: false,
+            err,
+          })
           .status(400);
       }
       req.login(user, { session: false }, (err) => {
         if (err) {
           return res.json(err);
         }
+        console.log(user);
         // Generate JWT
         jwt.sign(
           { id: user._id, name: user.name, email: user.email },
@@ -113,6 +124,8 @@ router.post('/login', function (req, res, next) {
                 name: user.name,
                 id: user._id,
                 email: user.email,
+                followers: user.friends,
+                following: user.friend_requests,
                 token: `Bearer ${token}`,
               },
             });
@@ -123,6 +136,6 @@ router.post('/login', function (req, res, next) {
   )(req, res);
 });
 
-router.post('/signup', auth_controller.post_signup);
+router.post('/auth/signup', auth_controller.post_signup);
 
 module.exports = router;
