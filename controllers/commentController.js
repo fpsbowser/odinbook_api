@@ -4,22 +4,28 @@ const Comment = require('../models/comment');
 const { body, validationResult } = require('express-validator');
 const post = require('../models/post');
 
-exports.comment_list = (req, res, next) => {
-  // find post
-  Post.findById(req.params.postid)
-    .populate('comments')
-    .exec(function (err, post) {
-      if (err) {
-        res
-          .json({
-            message: `Can't find post with id: ${req.params.postid}`,
-            error: err,
-          })
-          .status(400);
-        return next(err);
-      }
-      res.json(post.comments);
-    });
+exports.comment_list = async (req, res, next) => {
+  try {
+    const post = await Post.findById(req.params.postid).populate([
+      {
+        path: 'comments',
+        populate: { path: 'owner', select: 'name' },
+      },
+      {
+        path: 'comments',
+        populate: { path: 'likes', select: 'name' },
+      },
+    ]);
+    res.json(post.comments);
+  } catch (err) {
+    res
+      .json({
+        message: `Can't find post with id: ${req.params.postid}`,
+        error: err,
+      })
+      .status(400);
+    return next(err);
+  }
 };
 
 exports.comment_detail = (req, res, next) => {
@@ -67,8 +73,7 @@ exports.comment_create = [
         } else {
           const comment = new Comment({
             comment: req.body.comment,
-            // TODO: CHANGE FOR AUTHENTICATION - USE CURRENT LOGGED IN USER
-            owner: '009f37bb36efc8d1aea0b5db',
+            owner: req.body.owner,
             likes: [],
             timestamp: new Date(),
             edited_timestamp: null,
@@ -80,7 +85,7 @@ exports.comment_create = [
             { upsert: true, new: true },
             function (err) {
               if (err) {
-                console.log(err);
+                console.log('Error pushing comment to post array' + err);
                 next(err);
               }
             }
@@ -107,8 +112,17 @@ exports.comment_update = [
     if (!errors.isEmpty()) {
       res.json(errors).status(400);
     } else {
+      if (req.body.like !== null) {
+        originalComment.likes.includes(req.body.like)
+          ? originalComment.likes.splice(
+              originalComment.likes.indexOf(req.body.like),
+              1
+            )
+          : (originalComment.likes = [...originalComment.likes, req.body.like]);
+        console.log(originalComment.likes);
+      }
       // make sure post exists
-      Post.findById(req.params.postid, (err, post) => {
+      Post.findById(req.params.postid, (err) => {
         if (err) {
           res.json({
             message: `Can't find post with id: ${req.params.postid}`,
@@ -118,7 +132,9 @@ exports.comment_update = [
           // create updated comment document
           const comment = new Comment({
             _id: originalComment._id,
-            comment: req.body.comment,
+            comment: req.body.comment
+              ? req.body.comment
+              : originalComment.comment,
             owner: originalComment.owner,
             likes: originalComment.likes,
             timestamp: originalComment.timestamp,
