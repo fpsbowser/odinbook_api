@@ -86,41 +86,64 @@ exports.post_signup = [
   },
 ];
 
-// exports.post_login = [
-//   body('email', 'Must provide email').trim().isLength({ min: 1 }).escape(),
-//   body('password', 'Must provide password')
-//     .trim()
-//     .isLength({ min: 1 })
-//     .escape(),
-//   async (req, res, next) => {
-//     const errors = validationResult(req);
+exports.post_login = [
+  body('email', 'Must provide email').trim().isLength({ min: 1 }).escape(),
+  body('password', 'Must provide password')
+    .trim()
+    .isLength({ min: 1 })
+    .escape(),
+  async (req, res, next) => {
+    const errors = validationResult(req);
 
-//     if (!errors.isEmpty()) {
-//       console.log('validation errors');
-//       return res.json(errors).status(400);
-//     } else {
-//       // Search for user
-//       try {
-//         const user = await User.findOne({ email: req.body.email }).exec();
-//         if (user) {
-//           // USER FOUND : Compare passwords
-//           let passwordIsValid = bcrypt.compareSync(
-//             req.body.password,
-//             user.password
-//           );
-//           if (!passwordIsValid) {
-//             return res.json({ message: 'Invalid Password' }).status(401);
-//           } else {
-//             // TODO: Login User - PASSPORT
-//           }
-//         } else {
-//           // user email not found
-//           return res.json({ message: 'User email not found.' }).status(401);
-//         }
-//       } catch (err) {
-//         console.log(err);
-//         return res.json(err);
-//       }
-//     }
-//   },
-// ];
+    if (!errors.isEmpty()) {
+      console.log('validation errors');
+      return res.status(400).json(errors);
+      // return res.json({ errors, status: 400 });
+    } else {
+      // Use Passport's local strategy to authenticate the user
+      passport.authenticate(
+        'local',
+        { session: false, failureMessage: true },
+        (err, user, info) => {
+          if (err || !user) {
+            return res
+              .status(401)
+              .json({ message: 'Incorrect email or password', errors: [info] });
+          }
+
+          // Login the user
+          req.login(user, { session: false }, (err) => {
+            if (err) {
+              return res.json(err);
+            }
+
+            // Generate JWT
+            jwt.sign(
+              { id: user._id, name: user.name, email: user.email },
+              process.env.TOKEN_SECRET,
+              { expiresIn: '3d' },
+              (err, token) => {
+                if (err) {
+                  console.log(err);
+                  return res.json(err);
+                }
+                return res.json({
+                  success: true,
+                  message: 'Successfully logged in',
+                  user: {
+                    name: user.name,
+                    id: user._id,
+                    email: user.email,
+                    followers: user.friends,
+                    following: user.friend_requests,
+                    token: `Bearer ${token}`,
+                  },
+                });
+              }
+            );
+          });
+        }
+      )(req, res, next);
+    }
+  },
+];
