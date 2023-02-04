@@ -23,11 +23,11 @@ passport.use(
           return done(err);
         }
         if (!user) {
-          return done(null, false, { message: 'User email not found!' });
+          return done(null, false, { message: 'Incorrect email or password!' });
         }
         let passwordIsValid = bcrypt.compareSync(password, user.password);
         if (!passwordIsValid) {
-          return done(null, false, { message: 'Incorrect password' });
+          return done(null, false, { message: 'Incorrect email or password!' });
         }
         return done(null, user);
       });
