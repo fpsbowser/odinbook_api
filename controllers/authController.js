@@ -9,14 +9,10 @@ const jwtStrategy = require('passport-jwt').Strategy;
 const { body, validationResult } = require('express-validator');
 
 exports.post_signup = [
-  body('email', 'must provide email')
-    .trim()
-    .isLength({ min: 1 })
-    .isEmail()
-    .escape(),
+  body('email', 'Must provide a valid email address!').isEmail(),
   body(
     'password',
-    'Password must be at least 6 characters long and contain a lowercase, uppercase, and a number'
+    'Password must be at least 6 characters long and contain a lowercase, uppercase, and a number!'
   )
     .trim()
     .isStrongPassword({
@@ -26,11 +22,11 @@ exports.post_signup = [
       minNumbers: 1,
       minSymbols: 0,
     }),
-  body('firstname', 'must provide firstname')
+  body('firstname', 'Please provide your first name!')
     .trim()
     .isLength({ min: 1 })
     .escape(),
-  body('lastname', 'must provide lastname')
+  body('lastname', 'Please provide your last name!')
     .trim()
     .isLength({ min: 1 })
     .escape(),
@@ -38,7 +34,8 @@ exports.post_signup = [
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
-      return res.json({ message: 'Validation error', errors }).status(400);
+      console.log('check', errors);
+      return res.status(400).json(errors);
     }
     // Check if email exists in DB
     User.exists({ email: req.body.email }, (err, userExists) => {
@@ -46,12 +43,14 @@ exports.post_signup = [
         return res.json(err);
       }
       if (userExists) {
-        return res
-          .json({
-            error:
-              'The email you have entered already exists! Please use a different email.',
-          })
-          .status(400);
+        return res.status(400).json({
+          errors: [
+            {
+              message:
+                'The email you have entered already exists! Please use a different email.',
+            },
+          ],
+        });
       } else {
         // Create new user
         const user = new User({
@@ -59,7 +58,6 @@ exports.post_signup = [
             first: req.body.firstname,
             last: req.body.lastname,
           },
-          // TODO: Add dob validation
           dob: null,
           email: req.body.email,
           password: bcrypt.hashSync(req.body.password, 8),
@@ -71,14 +69,31 @@ exports.post_signup = [
           if (err) {
             return res.json(err).status(500);
           } else {
-            res.json({
-              message: 'Successfully registered user',
-              user: {
-                name: user.name,
-                email: user.email,
-                id: user._id,
-              },
-            });
+            // success - send jwt token and user info for frontend client
+            jwt.sign(
+              { id: user._id, name: user.name, email: user.email },
+              process.env.TOKEN_SECRET,
+              { expiresIn: '3d' },
+              (err, token) => {
+                if (err) {
+                  console.log(err);
+                  return res.json(err);
+                }
+                return res.json({
+                  //data
+                  success: true,
+                  message: 'Successfully signed up',
+                  user: {
+                    name: user.name,
+                    id: user._id,
+                    email: user.email,
+                    followers: user.friends,
+                    following: user.friend_requests,
+                    token: `Bearer ${token}`,
+                  },
+                });
+              }
+            );
           }
         });
       }
@@ -98,7 +113,6 @@ exports.post_login = [
     if (!errors.isEmpty()) {
       console.log('validation errors');
       return res.status(400).json(errors);
-      // return res.json({ errors, status: 400 });
     } else {
       // Use Passport's local strategy to authenticate the user
       passport.authenticate(
