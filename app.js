@@ -6,6 +6,8 @@ var logger = require('morgan');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const passport = require('passport');
+const compression = require('compression');
+const helmet = require('helmet');
 require('./passport');
 
 // Connect to MongoDB
@@ -24,6 +26,8 @@ const apiRouter = require('./routes/api');
 
 var app = express();
 
+app.use(compression());
+app.use(helmet());
 app.use(cors());
 app.use(passport.initialize());
 app.use(logger('dev'));
@@ -34,7 +38,7 @@ app.use(cookieParser());
 app.use('/', indexRouter);
 app.use('/api', apiRouter);
 
-app.listen(4000, () => {
+app.listen(4000 || process.env.PORT, () => {
   console.log('listening on PORT 4000');
 });
 
