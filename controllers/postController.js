@@ -1,6 +1,6 @@
-const User = require('../models/user');
-const Post = require('../models/post');
-const Comment = require('../models/comment');
+const User = require('../models/User');
+const Post = require('../models/Post');
+const Comment = require('../models/Comment');
 const { body, validationResult } = require('express-validator');
 
 exports.posts_list = function (req, res, next) {

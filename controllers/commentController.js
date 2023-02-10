@@ -1,8 +1,8 @@
-const User = require('../models/user');
-const Post = require('../models/post');
-const Comment = require('../models/comment');
+const User = require('../models/User');
+const Post = require('../models/Post');
+const Comment = require('../models/Comment');
 const { body, validationResult } = require('express-validator');
-const post = require('../models/post');
+// const post = require('../models/post');
 
 exports.comment_list = async (req, res, next) => {
   try {
