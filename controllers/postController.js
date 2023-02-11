@@ -6,6 +6,7 @@ const { body, validationResult } = require('express-validator');
 exports.posts_list = function (req, res, next) {
   // fetch all posts
   Post.find({})
+    .sort({ timestamp: -1 })
     .populate('owner')
     .exec((err, list_posts) => {
       if (err) {
